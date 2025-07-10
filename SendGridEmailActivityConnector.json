@@ -1,0 +1,458 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "defaultValue": "[resourceGroup().location]",
+            "minLength": 1,
+            "type": "String"
+        },
+        "workspace-location": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "[resourceGroup().location]"
+            }
+        },
+        "subscription": {
+            "defaultValue": "[last(split(subscription().id, '/'))]",
+            "type": "String",
+            "metadata": {
+                "description": "subscription id where Microsoft Sentinel is setup"
+            }
+        },
+        "resourceGroupName": {
+            "defaultValue": "[resourceGroup().name]",
+            "type": "String",
+            "metadata": {
+                "description": "reaource group name where Microsoft Sentinel is setup"
+            }
+        },
+        "workspace": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "Workspace name for Log Analytics where Microsoft Sentinel is setup"
+            }
+        }
+    },
+    "variables": {
+        "_solutionName": "SendGrid Email Activity Logs",
+        "workspaceResourceId": "[resourceId('microsoft.OperationalInsights/Workspaces', parameters('workspace'))]",
+        "dataConnectorContentId": "SendGridEmailActivityLogs",
+        "dataConnectorTemplateSpecName": "[concat(parameters('workspace'),'-dc-',uniquestring(variables('dataConnectorContentId')))]",
+        "dataConnectorVersion": "1.0.0",
+        "logAnalyticsTableId": "SendGridv1_CL",
+        "dataCollectionEndpointName": "SendGridDCE",
+        "dataCollectionRuleId": "SendGridDCR",
+        "SendGridStream": "SendGridStream"
+    },
+    "resources": [
+        {
+                            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',concat('DataConnector-', variables('dataConnectorContentId')))]",
+                            "apiVersion": "2022-01-01-preview",
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/metadata",
+                            "properties": {
+                                "parentId": "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/dataConnectorDefinitions', variables('dataConnectorContentId'))]",
+                                "contentId": "[variables('dataConnectorContentId')]",
+                                "kind": "DataConnector",
+                                "version": "[variables('dataConnectorVersion')]",
+                                "source": {
+                                    "sourceId": "[variables('dataConnectorContentId')]",    
+                                    "name": "[variables('_solutionName')]",
+                                    "kind": "Solution"
+                                },
+                                "author": {
+                                    "name": "Parth Dabgar"
+                                },
+                                "support": {
+                                    "name": "Parth Dabgar",
+                                    "email": "parth.p@paramountassure.com",
+                                    "tier": "Partner"
+                                },
+                                "dependencies": {
+                                    "criteria": [
+                                        {
+                                            "version": "[variables('dataConnectorVersion')]",
+                                            "contentId": "[variables('dataConnectorTemplateSpecName')]",
+                                            "kind": "ResourcesDataConnector"
+                                        }
+                        ]
+                    }
+                }
+            },
+        {
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',variables('dataConnectorContentId'))]",
+            "apiVersion": "2022-09-01-preview",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectorDefinitions",
+            "location": "[parameters('workspace-location')]",
+            "kind": "Customizable",
+            "properties": {
+                "connectorUiConfig": {
+                    "id": "[variables('dataConnectorContentId')]",
+                    "title": "[variables('_solutionName')]",
+                    "publisher": "Parth Dabgar",
+                    "logo":"data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjIyNSIgaGVpZ2h0PSIyMjUiPgo8cGF0aCBkPSJNMCAwIEM3NC4yNSAwIDE0OC41IDAgMjI1IDAgQzIyNSA3NC4yNSAyMjUgMTQ4LjUgMjI1IDIyNSBDMTUwLjc1IDIyNSA3Ni41IDIyNSAwIDIyNSBDMCAxNTAuNzUgMCA3Ni41IDAgMCBaICIgZmlsbD0iIzI4NDY2MCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwwKSIvPgo8cGF0aCBkPSJNMCAwIEMxMy4yIDAgMjYuNCAwIDQwIDAgQzQwIDEzLjUzIDQwIDI3LjA2IDQwIDQxIEMzMy40IDQxIDI2LjggNDEgMjAgNDEgQzIwIDQ3LjYgMjAgNTQuMiAyMCA2MSBDNi44IDYxIC02LjQgNjEgLTIwIDYxIEMtMjAgNDcuNDcgLTIwIDMzLjk0IC0yMCAyMCBDLTEzLjQgMjAgLTYuOCAyMCAwIDIwIEMwIDEzLjQgMCA2LjggMCAwIFogIiBmaWxsPSIjMDlCM0UzIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDMsNTUpIi8+CjxwYXRoIGQ9Ik0wIDAgQzMuMzQyMTIzMTEgMi4yNzg3MjAzIDUuMzE3MDg1NDcgNC42NTQ5NjYwNyA3Ljc1IDcuODc1IEM2LjQzIDguODY1IDUuMTEgOS44NTUgMy43NSAxMC44NzUgQzEuMjU2Mzg0MjkgOS42NzExODU1MiAtMC45MzE0MzA4MyA4LjQyMDcxMjc4IC0zLjI1IDYuODc1IEMtNy40NDk4ODMzOCA2LjIwOTgyNTEgLTExLjA2NTg2MTIgNi4xNjQ1MTY3MiAtMTQuNzUgOC4zNzUgQy0xNi44MTEwMzk2MSAxMS44MTAwNjYwMiAtMTcuNDcyNzM2MSAxNC44NzM3MDUwNCAtMTcuMjUgMTguODc1IEMtMTUuODkzMzk5ODQgMjEuODQ2NjAwMzUgLTE0LjU0NzE2NTU5IDIzLjU3NzgzNDQxIC0xMi4yNSAyNS44NzUgQy04Ljg2ODQ0NTQ2IDI2LjQzNDY2NDk1IC01LjYzMDcyMzUzIDI2LjQzNjYzNjMzIC0yLjI1IDI1Ljg3NSBDMC40MjgxODk4MyAyMy41NzY0Mjg5NCAwLjQyODE4OTgzIDIzLjU3NjQyODk0IDEuNzUgMjAuODc1IEMtMS41NSAyMC44NzUgLTQuODUgMjAuODc1IC04LjI1IDIwLjg3NSBDLTguMjUgMTguNTY1IC04LjI1IDE2LjI1NSAtOC4yNSAxMy44NzUgQy0yLjMxIDEzLjg3NSAzLjYzIDEzLjg3NSA5Ljc1IDEzLjg3NSBDOS43NSAxMi41NTUgOS43NSAxMS4yMzUgOS43NSA5Ljg3NSBDMTUuMDgzMzMzMzMgOS44NzUgMjAuNDE2NjY2NjcgOS44NzUgMjUuNzUgOS44NzUgQzI1LjA2MjUgMTIuNzUgMjUuMDYyNSAxMi43NSAyMy43NSAxNS44NzUgQzIxLjE4NzUgMTcuMTg3NSAyMS4xODc1IDE3LjE4NzUgMTguNzUgMTcuODc1IEMxNi44MDkwOTE3NCAxOS44MTU5MDgyNiAxNy4zNTA4MDU2NSAyMy4zNDc5MzkwMiAxNy4xODc1IDI1LjkzNzUgQzE3LjEwMzcxMDk0IDI3LjIyNzg1MTU2IDE3LjAxOTkyMTg3IDI4LjUxODIwMzEzIDE2LjkzMzU5Mzc1IDI5Ljg0NzY1NjI1IEMxNi44NDI3MTQ4NCAzMS4zNDYxOTE0MSAxNi44NDI3MTQ4NCAzMS4zNDYxOTE0MSAxNi43NSAzMi44NzUgQzE0Ljc3IDMyLjg3NSAxMi43OSAzMi44NzUgMTAuNzUgMzIuODc1IEMxMC40MiAyOC41ODUgMTAuMDkgMjQuMjk1IDkuNzUgMTkuODc1IEM5LjE5MzEyNSAyMS4xMTI1IDguNjM2MjUgMjIuMzUgOC4wNjI1IDIzLjYyNSBDNS43MTgzMjE5IDI4LjI5Njg0NzkgMy4wMDIzODEyMiAzMC42ODk1MzYyIC0xLjYyNSAzMy4xMjUgQy02LjU2MzI1OTMxIDM0LjUzNTkzMTIzIC0xMC42NjU1OTI3MSAzNC4zNzkzODA1IC0xNS4zNzUgMzIuMzc1IEMtMTkuODkxMzA3MjkgMjkuODQ0NDYyMDYgLTIyLjUyMTk5NzMxIDI2Ljc2NTcyMzIxIC0yNC4yNSAyMS44NzUgQy0yNS4xNjM2ODM1IDE2LjIzNTYyNTYxIC0yNS4zODE3OTkyNyAxMC44MDk3MTQ4MiAtMjIuMTg3NSA1Ljg3NSBDLTE2LjA3NzY5NTAzIC0xLjEyNDc0ODU1IC04LjgxMjEyOTcyIC0zLjA1MDM1MjYgMCAwIFogIiBmaWxsPSIjRUFFREVGIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNDUuMjUsMTM2LjEyNSkiLz4KPHBhdGggZD0iTTAgMCBDMi4zMSAwIDQuNjIgMCA3IDAgQzcgMTAuODkgNyAyMS43OCA3IDMzIEM0LjAzIDMzIDEuMDYgMzMgLTIgMzMgQy0zLjIzNzUgMzMuMjI2ODc1IC00LjQ3NSAzMy40NTM3NSAtNS43NSAzMy42ODc1IEMtOS42NzA2ODk0MSAzNC4wNjQ0ODkzNyAtMTAuOTY5MDI5OTcgMzMuNDQxNjE0NzUgLTE0IDMxIEMtMTcuNTkwMjUzMTggMjcuMDQzNzUwMTMgLTE3LjU1MzkzODQ4IDIzLjgwNjk0MDE3IC0xNy40Mjk2ODc1IDE4LjYzNjcxODc1IEMtMTcgMTYgLTE3IDE2IC0xNC42MjUgMTIuODc1IEMtMTAuNDc0OTA2MjUgOS45MTA2NDczMiAtOC4xMTMyMzEzMSA5LjgxNzM4NDYgLTMgMTAgQy0yLjM0IDEwLjMzIC0xLjY4IDEwLjY2IC0xIDExIEMtMC42NyA3LjM3IC0wLjM0IDMuNzQgMCAwIFogIiBmaWxsPSIjRjBGMkY0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxOTgsMTM2KSIvPgo8cGF0aCBkPSJNMCAwIEMxLjk4IDAgMy45NiAwIDYgMCBDNiAxMC44OSA2IDIxLjc4IDYgMzMgQzMuMzMzMzMzMzMgMzMgMC42NjY2NjY2NyAzMyAtMiAzMyBDLTIuOTkgMzMuNDk1IC0yLjk5IDMzLjQ5NSAtNCAzNCBDLTcuMTc0NTYxODYgMzQuNTE2Nzg5MTQgLTkuMTg5NDM3NTUgMzQuNTM3NjE3OTUgLTExLjkxNDA2MjUgMzIuNzMwNDY4NzUgQy0xNy43NDg1MDMzNiAyNy43OTY0MDQ1NyAtMTcuNzQ4NTAzMzYgMjcuNzk2NDA0NTcgLTE4LjI3MzQzNzUgMjQuMDQ2ODc1IEMtMTguNDYzMjkwNDMgMTkuNzUzMjc4MDEgLTE4LjQzNDI2NjggMTYuOTA0MTcwMzYgLTE1LjYyNSAxMy41IEMtMTEuOTIwMDk2NzcgOS45NzE1MjA3MyAtMTAuMDYwMTUyMDMgOS44NzQxMzM5NyAtNC45NzI2NTYyNSA5Ljc2OTUzMTI1IEMtMyAxMCAtMyAxMCAwIDEyIEMwIDguMDQgMCA0LjA4IDAgMCBaICIgZmlsbD0iI0Y0RjZGNyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTEzLDEzNikiLz4KPHBhdGggZD0iTTAgMCBDMi41NTg0MzY1NSAxLjEzMzg1MjU2IDQuNjU1NDgzOTggMi40MzY5ODkzMiA3IDQgQzYuNjcgNC45OSA2LjM0IDUuOTggNiA3IEMzLjQzNzUgOC4xODc1IDMuNDM3NSA4LjE4NzUgMSA5IEMwLjM0IDguMzQgLTAuMzIgNy42OCAtMSA3IEMtNC4wODM0NzgyNiA2LjgzMzE4ODkxIC00LjA4MzQ3ODI2IDYuODMzMTg4OTEgLTcgNyBDLTcgOC42NSAtNyAxMC4zIC03IDEyIEMtNi4xNjg1NTQ2OSAxMi4zMTQ1MzEyNSAtNS4zMzcxMDkzNyAxMi42MjkwNjI1IC00LjQ4MDQ2ODc1IDEyLjk1MzEyNSBDLTMuMzkzNzg5MDYgMTMuMzgxMDkzNzUgLTIuMzA3MTA5MzcgMTMuODA5MDYyNSAtMS4xODc1IDE0LjI1IEMwLjQzMDkxNzk3IDE0Ljg3NjQ4NDM3IDAuNDMwOTE3OTcgMTQuODc2NDg0MzcgMi4wODIwMzEyNSAxNS41MTU2MjUgQzUuMDkzMjIzOTMgMTcuMDQ3NDIzMTUgNi4zNDk4MDMyNCAxOC4wOTUyMDE2IDggMjEgQzguNjAyMjUyNjkgMjQuOTU3NjYwNTYgOC4xNjE4NzMxMSAyNi42OTkzNzg1MiA2LjI1IDMwLjI1IEMyLjk0MDY5NyAzNC4yOTQ3MDM2NiAxLjQzNDM1NDA1IDM0LjgzMjY1ODY5IC0zLjc1IDM1LjQzNzUgQy04LjcyMjM5NjQ1IDM1LjM1MzM4MDUxIC0xMi4xMTYwMDc0NiAzMi44OTIzMzQ4NyAtMTYgMzAgQy0xNC40ODA1MjUwMSAyNi42MzI1MTQ4OCAtMTMuNDc4OTkxNTggMjUuMzkxNTk2NjMgLTEwIDI0IEMtOS4zNCAyNC45OSAtOC42OCAyNS45OCAtOCAyNyBDLTYuMDIyNTI4NzggMjcuMzYyOTc5MzYgLTYuMDIyNTI4NzggMjcuMzYyOTc5MzYgLTMuODc1IDI3LjE4NzUgQy0yLjU5NjI1IDI3LjEyNTYyNSAtMS4zMTc1IDI3LjA2Mzc1IDAgMjcgQy0wLjEyMTU0ODYgMjQuNTQ5MTM0MjYgLTAuMTIxNTQ4NiAyNC41NDkxMzQyNiAtMSAyMiBDLTMuMTYwMzM2NjggMjAuNzA2MzUzMDEgLTMuMTYwMzM2NjggMjAuNzA2MzUzMDEgLTUuODEyNSAyMCBDLTEwLjE4MzI1NDMgMTguNDMwNTMwMjkgLTEyLjc5NDY0ODA0IDE3LjMxMDQ2MDY1IC0xNSAxMyBDLTE1LjY4NzUgOS41NjI1IC0xNS42ODc1IDkuNTYyNSAtMTUgNiBDLTExLjE2MjA0NzE4IDAuNzEyNjY5MjMgLTYuNDA0NzQwNDcgLTEuNTI2MTI5NTcgMCAwIFogIiBmaWxsPSIjRUZGMUYzIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzOCwxMzUpIi8+CjxwYXRoIGQ9Ik0wIDAgQzEzLjIgMCAyNi40IDAgNDAgMCBDNDAgNi45MyA0MCAxMy44NiA0MCAyMSBDMzMuNCAyMSAyNi44IDIxIDIwIDIxIEMyMCAxNC40IDIwIDcuOCAyMCAxIEMxMy40IDEgNi44IDEgMCAxIEMwIDAuNjcgMCAwLjM0IDAgMCBaICIgZmlsbD0iIzE5ODFEQiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAzLDU1KSIvPgo8cGF0aCBkPSJNMCAwIEMwIDYuOTMgMCAxMy44NiAwIDIxIEMtNi4yNyAyMSAtMTIuNTQgMjEgLTE5IDIxIEMtMTkgMTQuNzMgLTE5IDguNDYgLTE5IDIgQy0yNS42IDIgLTMyLjIgMiAtMzkgMiBDLTM5IDEuNjcgLTM5IDEuMzQgLTM5IDEgQy0yNS45NzU1MDA5MSAwLjIzMTQzMTAzIC0xMy4wNDgzODEwNCAtMC4wOTg4NTEzNyAwIDAgWiAiIGZpbGw9IiMwODlERDciIHRyYW5zZm9ybT0idHJhbnNsYXRlKDEyMiw3NCkiLz4KPHBhdGggZD0iTTAgMCBDMy43NTIxMjI3NiAyLjAxNTAyODg5IDUuNjM2NDQwOTUgMy40NTQ2NjE0MiA4IDcgQzggOS4zMSA4IDExLjYyIDggMTQgQzIuMzkgMTQgLTMuMjIgMTQgLTkgMTQgQy04LjAxIDE1LjQ4NSAtOC4wMSAxNS40ODUgLTcgMTcgQy0zLjQxNjQyNzU5IDE3LjI1MDE1ODczIC0zLjQxNjQyNzU5IDE3LjI1MDE1ODczIDAgMTcgQzAuMzMgMTYuMzQgMC42NiAxNS42OCAxIDE1IEMyLjY1IDE1LjY2IDQuMyAxNi4zMiA2IDE3IEM1Ljg3NSAxOC44MTI1IDUuODc1IDE4LjgxMjUgNSAyMSBDMC45Njc3NTc4NiAyMy42MjU2NDYwNCAtMi4yMTY4Mzc3IDI0LjY5NzU0NDUgLTcgMjQgQy0xMC43NjQ1Njc2NiAyMS45MzMxNzg1NCAtMTQuMDUyMTM5NzcgMTkuODk1NzIwNDUgLTE2IDE2IEMtMTYuNjA0NDAwNTUgMTEuOTAzNTA3MzggLTE2Ljk0MDM1ODAxIDkuNTAxMTIxOTYgLTE0LjcyMjY1NjI1IDUuOTYwOTM3NSBDLTEwLjMzNzU4MjE3IDAuNzUwMzExNTggLTcuMDAwMDY0NTggLTAuOTYyODM0MTYgMCAwIFogIiBmaWxsPSIjRjFGM0Y1IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg2MywxNDYpIi8+CjxwYXRoIGQ9Ik0wIDAgQzYuNiAwIDEzLjIgMCAyMCAwIEMyMCA2LjYgMjAgMTMuMiAyMCAyMCBDMTMuNCAyMCA2LjggMjAgMCAyMCBDMCAxMy40IDAgNi44IDAgMCBaICIgZmlsbD0iIzk5RTBGMyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAzLDk2KSIvPgo8cGF0aCBkPSJNMCAwIEM2LjYgMCAxMy4yIDAgMjAgMCBDMjAgNi42IDIwIDEzLjIgMjAgMjAgQzEzLjQgMjAgNi44IDIwIDAgMjAgQzAgMTMuNCAwIDYuOCAwIDAgWiAiIGZpbGw9IiMxOTgxREYiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDgzLDk2KSIvPgo8cGF0aCBkPSJNMCAwIEM2LjYgMCAxMy4yIDAgMjAgMCBDMjAgNi4yNyAyMCAxMi41NCAyMCAxOSBDMTMuNCAxOSA2LjggMTkgMCAxOSBDMCAxMi43MyAwIDYuNDYgMCAwIFogIiBmaWxsPSIjOTlFMUY0IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg4Myw3NikiLz4KPHBhdGggZD0iTTAgMCBDMy4zMzMzMzMzMyAwIDYuNjY2NjY2NjcgMCAxMCAwIEMxMS43MDE1NjI1IC0wLjEyMzc1IDExLjcwMTU2MjUgLTAuMTIzNzUgMTMuNDM3NSAtMC4yNSBDMTcgMCAxNyAwIDE5LjIwNzAzMTI1IDEuNDA2MjUgQzIxLjk0MTY4ODY0IDUuMzYyMjY4NTMgMjEuNDI5OTA0MjcgOS4wNjU1Njk1IDIxLjI1IDEzLjc1IEMyMS4yMzE5NTMxMyAxNC42MzgxNjQwNiAyMS4yMTM5MDYyNSAxNS41MjYzMjgxMiAyMS4xOTUzMTI1IDE2LjQ0MTQwNjI1IEMyMS4xNDgyNzM3NCAxOC42Mjg3MDg0OCAyMS4wODI1NzAwOSAyMC44MTM3OTgxNiAyMSAyMyBDMTkuMDIgMjMgMTcuMDQgMjMgMTUgMjMgQzE0LjY3IDE3LjcyIDE0LjM0IDEyLjQ0IDE0IDcgQzEyLjM1IDYuNjcgMTAuNyA2LjM0IDkgNiBDNi45NDA3NzU5OCA4LjA1OTIyNDAyIDcuNTg1NzI0MjEgMTIuMjE3MDgxMjQgNy40Mzc1IDE1LjA2MjUgQzcuMzk0MzE2NDEgMTUuODIxMTEzMjggNy4zNTExMzI4MSAxNi41Nzk3MjY1NiA3LjMwNjY0MDYyIDE3LjM2MTMyODEyIEM3LjIwMDI2MzY3IDE5LjI0MDY1NDM4IDcuMDk5NjAwNjYgMjEuMTIwMzAyNDQgNyAyMyBDNC42OSAyMyAyLjM4IDIzIDAgMjMgQzAgMTUuNDEgMCA3LjgyIDAgMCBaICIgZmlsbD0iI0VGRjFGMyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNzIsMTQ2KSIvPgo8cGF0aCBkPSJNMCAwIEMtMC42ODc1IDIuODc1IC0wLjY4NzUgMi44NzUgLTIgNiBDLTQuNTYyNSA3LjMxMjUgLTQuNTYyNSA3LjMxMjUgLTcgOCBDLTguOTQwOTA4MjYgOS45NDA5MDgyNiAtOC4zOTkxOTQzNSAxMy40NzI5MzkwMiAtOC41NjI1IDE2LjA2MjUgQy04LjY0NjI4OTA2IDE3LjM1Mjg1MTU2IC04LjczMDA3ODEzIDE4LjY0MzIwMzEzIC04LjgxNjQwNjI1IDE5Ljk3MjY1NjI1IEMtOC44NzY5OTIxOSAyMC45NzE2Nzk2OSAtOC45Mzc1NzgxMiAyMS45NzA3MDMxMiAtOSAyMyBDLTEwLjk4IDIzIC0xMi45NiAyMyAtMTUgMjMgQy0xNSAxNS43NCAtMTUgOC40OCAtMTUgMSBDLTEzLjAyIDEgLTExLjA0IDEgLTkgMSBDLTkgMS42NiAtOSAyLjMyIC05IDMgQy04LjM0IDMgLTcuNjggMyAtNyAzIEMtNyAyLjM0IC03IDEuNjggLTcgMSBDLTQuNTM3MjExOTkgLTAuMjMxMzk0IC0yLjcyMDQ5NDUgLTAuMDcxNTkxOTYgMCAwIFogIiBmaWxsPSIjRjNGNUY3IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNzEsMTQ2KSIvPgo8cGF0aCBkPSJNMCAwIEMxLjk4IDAgMy45NiAwIDYgMCBDNiA3LjU5IDYgMTUuMTggNiAyMyBDNC4wMiAyMyAyLjA0IDIzIDAgMjMgQzAgMTcuMzkgMCAxMS43OCAwIDYgQy0wLjY2IDYgLTEuMzIgNiAtMiA2IEMtMS4zNCA0LjAyIC0wLjY4IDIuMDQgMCAwIFogIiBmaWxsPSIjRjNGNEY2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNzMsMTQ2KSIvPgo8cGF0aCBkPSJNMCAwIEMwLjk5IDAuNjYgMS45OCAxLjMyIDMgMiBDMy4zNzMzMTEwOSA1LjQyMjAxODI4IDMuNjM3NjMxODMgNy45MDE4NTYyOSAxLjg3NSAxMC45Mzc1IEMtMC45MjE2MjQ3MiAxMi41MjIyNTQwMSAtMi44NDkzMTk2IDEyLjQ1OTQ3NDIzIC02IDEyIEMtOC4zNTIxMDc4NCA5Ljg4MzEwMjk1IC04LjkxODEwOTUzIDguNTU5NTg0ODUgLTkuMzc1IDUuNDM3NSBDLTkgMyAtOSAzIC03Ljg3NSAxLjE4NzUgQy01LjE1NTIzMzQ2IC0wLjUzNTAxODgxIC0zLjE1NDEzNzUxIC0wLjMyODU1NTk5IDAgMCBaICIgZmlsbD0iIzM1NTE2QSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTEwLDE1MikiLz4KPHBhdGggZD0iTTAgMCBDMy41NjI1IDAuMzc1IDMuNTYyNSAwLjM3NSA1LjU2MjUgMi4wNjI1IEM2Ljg0MDUwMjUzIDUuMDE3ODgwODYgNi42NDMwMTg2MiA2LjM2NDk4MzgzIDUuNTYyNSA5LjM3NSBDNC4zMTI1IDExLjE4NzUgNC4zMTI1IDExLjE4NzUgMi41NjI1IDEyLjM3NSBDLTAuMjU4NjU0ODggMTIuNzk4MTczMjMgLTEuNzc3MDA5MDcgMTIuNzYyMTg0MzQgLTQuMjUgMTEuMzEyNSBDLTYuMDg0NDIxIDguMzE5NDk3MzEgLTUuNzQ4NTc1NzYgNS43OTY4MzMzNyAtNS40Mzc1IDIuMzc1IEMtMy40Mzc1IDAuMzc1IC0zLjQzNzUgMC4zNzUgMCAwIFogIiBmaWxsPSIjMzI0RjY3IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxOTIuNDM3NSwxNTEuNjI1KSIvPgo8cGF0aCBkPSJNMCAwIEMyLjYyNSAwLjM3NSAyLjYyNSAwLjM3NSA1IDEgQzUuNjI1IDMuMzc1IDUuNjI1IDMuMzc1IDYgNiBDNS4zNCA2LjY2IDQuNjggNy4zMiA0IDggQzEuMzc1IDcuNjI1IDEuMzc1IDcuNjI1IC0xIDcgQy0xLjYyNSA0LjYyNSAtMS42MjUgNC42MjUgLTIgMiBDLTEuMzQgMS4zNCAtMC42OCAwLjY4IDAgMCBaICIgZmlsbD0iI0RCRTBFNSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTc0LDEzNSkiLz4KPHBhdGggZD0iTTAgMCBDNS42MSAwIDExLjIyIDAgMTcgMCBDMTUuMDIgMC45OSAxNS4wMiAwLjk5IDEzIDIgQzEyLjAxIDEuNjcgMTEuMDIgMS4zNCAxMCAxIEM5LjY3IDEuOTkgOS4zNCAyLjk4IDkgNCBDNi42OSA0IDQuMzggNCAyIDQgQzEuMzQgMi42OCAwLjY4IDEuMzYgMCAwIFogIiBmaWxsPSIjMzY1MTY5IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1NCwxNjApIi8+CjxwYXRoIGQ9Ik0wIDAgQzAuOTI4MTI1IDAuMjA2MjUgMS44NTYyNSAwLjQxMjUgMi44MTI1IDAuNjI1IEMzLjE0MjUgMS42MTUgMy40NzI1IDIuNjA1IDMuODEyNSAzLjYyNSBDMC41MTI1IDMuNjI1IC0yLjc4NzUgMy42MjUgLTYuMTg3NSAzLjYyNSBDLTYuMTg3NSAyLjk2NSAtNi4xODc1IDIuMzA1IC02LjE4NzUgMS42MjUgQy0zLjE4NzUgLTAuMzc1IC0zLjE4NzUgLTAuMzc1IDAgMCBaICIgZmlsbD0iIzNFNTk3MSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjAuMTg3NSwxNTEuMzc1KSIvPgo8L3N2Zz4K",
+                    "descriptionMarkdown": "This connector uses [Sendgrid Email Activity API](https://www.twilio.com/docs/sendgrid/api-reference/email-activity) to fetch the latest logs from SendGrid.",
+                    "graphQueries": [
+                        {
+                            "metricName": "Total Logs received",
+                            "legend": "Total Logs received",
+                            "baseQuery": "SendGridv1_CL"
+                        }
+                    ],
+                    "sampleQueries": [
+                        {
+                            "description": "Get Sample of SendGrid Email Activity Logs",
+                            "query": "SendGridv1_CL | take 10"
+                        }
+                    ],
+                    "dataTypes": [
+                        {
+                            "name": "SendGridv1_CL",
+                            "lastDataReceivedQuery": "SendGridv1_CL\n| where TimeGenerated > ago(12h)\n| summarize Time = max(TimeGenerated)\n| where isnotempty(Time)"
+                        }
+                    ],
+                    "connectivityCriteria": [
+                        {
+                            "type": "HasDataConnectors",
+                            "value": null
+                        }
+                    ],
+                    "availability": {
+                        "status": 1,
+                        "isPreview": true
+                    },
+                    "permissions": {
+                        "tenant": null,
+                        "licenses": null,
+                        "resourceProvider": [
+                            {
+                                "provider": "Microsoft.OperationalInsights/workspaces",
+                                "permissionsDisplayText": "Read and Write permissions are required.",
+                                "providerDisplayName": "Workspace",
+                                "scope": "Workspace",
+                                "requiredPermissions": {
+                                    "read": true,
+                                    "write": true,
+                                    "delete": true,
+                                    "action": false
+                                }
+                            }
+                        ]
+                    },
+                    "instructionSteps": [
+                        {
+                            "instructions": [
+                                {
+                                    "type": "Markdown",
+                                    "parameters": {
+                                        "content": "Review the documentation provided at [SendGrid Email Activity Feed API](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/getting-started-email-activity-api) to get clarity about the REST APIs being offered. Moreover, review the documentation [Create REST API Key](https://www.twilio.com/docs/sendgrid/ui/account-and-settings/api-keys#creating-an-api-key) for your account to create an API key which is required for this connector."
+                                    }
+                                },
+                                {
+                                    "type": "Textbox",
+                                    "parameters": {
+                                        "label": "API Key",
+                                        "placeholder": "Password",
+                                        "type": "password",
+                                        "name": "Password"
+                                    }
+                                },
+                                {
+                                    "parameters": {
+                                        "label": "toggle",
+                                        "name": "toggle"
+                                    },
+                                    "type": "ConnectionToggleButton"
+                                }
+                            ],
+                            "innerSteps": null
+                        }
+                    ],
+                    "isConnectivityCriteriasMatchSome": false
+                },
+                "connectionsConfig": {
+                    "templateSpecName": "[concat('/subscriptions/',parameters('subscription'),'/resourceGroups/',parameters('resourceGroupName'),'/providers/Microsoft.Resources/templateSpecs/',variables('dataConnectorTemplateSpecName'))]",
+                    "templateSpecVersion": "[variables('dataConnectorVersion')]"
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('workspace'), '/' , variables('logAnalyticsTableId'))]",
+            "type": "Microsoft.OperationalInsights/workspaces/tables",
+            "apiVersion": "2021-12-01-preview",
+            "location": "[parameters('workspace-location')]",
+            "tags": {},
+            "properties": {
+                "plan": "Analytics",
+                "schema": {
+                    "name": "[variables('logAnalyticsTableId')]",
+                    "columns": [
+                        {
+                            "name": "TimeGenerated",
+                            "type": "datetime",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "last_event_time",
+                            "type": "datetime",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "from_email",
+                            "type": "string",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "msg_id",
+                            "type": "string",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "subject",
+                            "type": "string",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "to_email",
+                            "type": "string",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "status",
+                            "type": "string",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "opens_count",
+                            "type": "long",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        },
+                        {
+                            "name": "clicks_count",
+                            "type": "long",
+                            "isDefaultDisplay": true,
+                            "isHidden": false
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Insights/dataCollectionEndpoints",
+            "apiVersion": "2021-09-01-preview",
+            "name": "[variables('dataCollectionEndpointName')]",
+            "location": "[parameters('workspace-location')]",
+            "properties": {}
+        },
+        {
+            "name": "[variables('dataCollectionRuleId')]",
+            "apiVersion": "2021-09-01-preview",
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "location": "[parameters('workspace-location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dataCollectionEndpointName'))]",
+                "[concat('subscriptions/', parameters('subscription'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'), '/tables/', variables('logAnalyticsTableId'))]"
+            ],
+            "properties": {
+                "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dataCollectionEndpointName'))]",
+                "streamDeclarations": {
+                    "[concat('Custom-', variables('SendGridStream'))]": {
+                        "columns":[
+                        {
+                            "name": "TimeGenerated",
+                            "type": "datetime",
+                            "description": ""
+                        },
+                        {
+                            "name": "last_event_time",
+                            "type": "datetime",
+                            "description": ""
+                        },
+                        {
+                            "name": "from_email",
+                            "type": "string",
+                            "description": ""
+                        },
+                        {
+                            "name": "msg_id",
+                            "type": "string",
+                            "description": ""
+                        },
+                        {
+                            "name": "subject",
+                            "type": "string",
+                            "description": ""
+                        },
+                        {
+                            "name": "to_email",
+                            "type": "string",
+                            "description": ""
+                        },
+                        {
+                            "name": "status",
+                            "type": "string",
+                            "description": ""
+                        },
+                        {
+                            "name": "opens_count",
+                            "type": "long",
+                            "description": ""
+                        },
+                        {
+                            "name": "clicks_count",
+                            "type": "long",
+                            "description": ""
+                        }
+                    ]
+                }
+                },
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "workspaceResourceId": "[variables('workspaceResourceId')]",
+                            "name": "clv2ws1"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "[concat('Custom-', variables('SendGridStream'))]"
+                        ],
+                        "destinations": [
+                            "clv2ws1"
+                        ],
+                        "transformKql": "source",
+                        "outputStream": "[concat('Custom-', variables('logAnalyticsTableId'))]"
+                    }
+                ]
+            }
+        }, 
+        {
+            "type": "Microsoft.Resources/templateSpecs",
+            "apiVersion": "2021-05-01",
+            "name": "[variables('dataConnectorTemplateSpecName')]",
+            "location": "[parameters('workspace-location')]",
+            "tags": {
+                "hidden-sentinelWorkspaceId": "[variables('workspaceResourceId')]",
+                "hidden-sentinelContentType": "DataConnector"
+            },
+            "properties": {
+                "description": "SendGrid Email Activity Data Connector Template",
+                "displayName": "SendGrid Email Activity Event Logs template"
+            }
+        },
+        {
+            "type": "Microsoft.Resources/templateSpecs/versions",
+            "apiVersion": "2021-05-01",
+            "name": "[concat(variables('dataConnectorTemplateSpecName'),'/',variables('dataConnectorVersion'))]",
+            "location": "[parameters('workspace-location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/templateSpecs', variables('dataConnectorTemplateSpecName'))]",
+                "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dataCollectionEndpointName'))]",
+                "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dataCollectionRuleId'))]"
+            ],
+            "tags": {
+                "hidden-sentinelWorkspaceId": "[variables('workspaceResourceId')]",
+                "hidden-sentinelContentType": "DataConnector"
+            },
+            "properties": {
+                "description": "SendGrid Email Activity data connector Template Spec version",
+                "mainTemplate": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "[variables('dataConnectorVersion')]",
+                    "parameters": {
+                        "apikey": {
+                            "defaultValue": "-NA-",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "API key for the user"
+                            }
+                        },
+                        "connectorDefinitionName": {
+                            "defaultValue": "SendGrid Email Activity - Custom Data Connector",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "connectorDefinitionName"
+                            }
+                        },
+                        "workspace": {
+                            "defaultValue": "[parameters('workspace')]",
+                            "type": "string"
+                        },
+                        "dataCollectionEndpointName": {
+                            "defaultValue": "[variables('dataCollectionEndpointName')]",
+                            "type": "string"
+                        },
+                        "dataCollectionRuleId": {
+                            "defaultValue": "[variables('dataCollectionRuleId')]",
+                            "type": "string"
+                        }
+                    },
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectors",
+                            "apiVersion": "2021-10-01-preview",
+                            "name": "[[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', 'SendGridEmailActivityLogs')]",
+                            "location": "[parameters('workspace-location')]",
+                            "kind": "RestApiPoller",
+                            "properties": {
+                                "connectorDefinitionName": "[[parameters('connectorDefinitionName')]",
+                                "dataType": "[variables('logAnalyticsTableId')]",
+                                "auth": {
+                                    "type": "APIKey",
+                                    "ApiKey": "[[parameters('apikey')]",
+                                    "ApiKeyName": "Authorization",
+                                    "ApiKeyIdentifier": "Bearer"
+                                },
+                                "request": {
+                                    "apiEndpoint": "[['https://api.sendgrid.com/v3/messages']",
+                                    "queryWindowInMin": 5,
+                                    "httpMethod": "Get",
+                                    "queryTimeFormat": "yyyy-MM-ddTHH:mm:ss.000Z",
+                                    "retryCount": 5,
+                                    "timeoutInSeconds": 60,
+                                    "headers": {
+                                        "Accept": "application/json",
+                                        "User-Agent": "Scuba"
+                                    },
+                                    "queryParameters": {
+                                        "query": "last_event_time BETWEEN TIMESTAMP \"{_QueryWindowStartTime}\" AND TIMESTAMP \"{_QueryWindowEndTime}\""
+                                    }
+                                },
+                                "Paging": {
+                                    "pagingType" : "PersistentLinkHeader", 
+                                    "pageSizeParameterName" : "limit", 
+                                    "pageSize" : 1000
+                                },
+                                "response": {
+                                    "EventsJsonPaths": ["$.messages"],
+                                    "format": "json",
+                                    "SuccessStatusValue": "success"
+                                },
+                                "dcrConfig": {
+                                    "streamName": "[concat('Custom-',variables('SendGridStream'))]",
+                                    "dataCollectionEndpoint": "[[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dataCollectionEndpointName')), '2021-09-01-preview').logsIngestion.endpoint]",
+                                    "dataCollectionRuleImmutableId": "[[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dataCollectionRuleId')), '2021-09-01-preview').immutableId]"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
