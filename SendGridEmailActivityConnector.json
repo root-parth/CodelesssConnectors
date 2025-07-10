@@ -154,9 +154,9 @@
                                     "type": "Textbox",
                                     "parameters": {
                                         "label": "API Key",
-                                        "placeholder": "Password",
+                                        "placeholder": "api key",
                                         "type": "password",
-                                        "name": "Password"
+                                        "name": "apikey"
                                     }
                                 },
                                 {
