@@ -1,0 +1,626 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace-location": {
+            "defaultValue": "[resourceGroup().location]",
+            "type": "String",
+            "metadata": {
+                "description": "[resourceGroup().location]"
+            }
+        },
+        "subscription": {
+            "defaultValue": "[last(split(subscription().id, '/'))]",
+            "type": "String",
+            "metadata": {
+                "description": "subscription id where Microsoft Sentinel is setup"
+            }
+        },
+        "resourceGroupName": {
+            "defaultValue": "[resourceGroup().name]",
+            "type": "String",
+            "metadata": {
+                "description": "reaource group name where Microsoft Sentinel is setup"
+            }
+        },
+        "workspace": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "Workspace name for Log Analytics where Microsoft Sentinel is setup"
+            }
+        }
+    },
+    "variables": {
+        "_solutionName": "Mulesoft Anypoint Audit Logs (using REST API)",
+        "workspaceResourceId": "[resourceId('microsoft.OperationalInsights/Workspaces', parameters('workspace'))]",
+        "dataConnectorContentId": "MuleAnypointV2",
+        "dataConnectorTemplateSpecName": "[concat(parameters('workspace'),'-dc-',uniquestring(variables('dataConnectorContentId')))]",
+        "dataConnectorVersion": "1.0.0",
+        "logAnalyticsTableId": "MuleAnypointV2_CL",
+        "dataCollectionEndpointName": "MuleAnypointDCE",
+        "dataCollectionRuleId": "MuleAnypointDCR",
+        "MuleAnypointStream": "MuleAnypointStream"
+    },
+    "resources": [
+        {
+                            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',concat('DataConnector-', variables('dataConnectorContentId')))]",
+                            "apiVersion": "2022-01-01-preview",
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/metadata",
+                            "properties": {
+                                "parentId": "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/dataConnectorDefinitions', variables('dataConnectorContentId'))]",
+                                "contentId": "[variables('dataConnectorContentId')]",
+                                "kind": "DataConnector",
+                                "version": "[variables('dataConnectorVersion')]",
+                                "source": {
+                                    "sourceId": "[variables('dataConnectorContentId')]",    
+                                    "name": "[variables('_solutionName')]",
+                                    "kind": "Solution"
+                                },
+                                "author": {
+                                    "name": "Parth Dabgar"
+                                },
+                                "support": {
+                                    "name": "Parth Dabgar",
+                                    "email": "parth.p@paramountassure.com",
+                                    "tier": "Partner"
+                                },
+                                "dependencies": {
+                                    "criteria": [
+                                        {
+                                            "version": "[variables('dataConnectorVersion')]",
+                                            "contentId": "[variables('dataConnectorTemplateSpecName')]",
+                                            "kind": "ResourcesDataConnector"
+                                        }
+                        ]
+                    }
+                }
+            },
+        {
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',variables('dataConnectorContentId'))]",
+            "apiVersion": "2022-09-01-preview",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectorDefinitions",
+            "location": "[parameters('workspace-location')]",
+            "kind": "Customizable",
+            "properties": {
+                "connectorUiConfig": {
+                    "id": "[variables('dataConnectorContentId')]",
+                    "title": "[variables('_solutionName')]",
+                    "publisher": "Parth",
+                    "logo": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vc3Znc3Rvcm0uY29tIgp2aWV3Qm94ID0gIjAgMCAyMjUgMjI1Igp3aWR0aD0iMjI1IgpoZWlnaHQ9IjIyNSI+CjxnIGZpbGw9Ik5vbmUiIGZpbGwtb3BhY2l0eT0iMC4wIiBzdHJva2U9IiNGREZFRkUiIHN0cm9rZS1vcGFjaXR5PSIxLjAwIiBzdHJva2Utd2lkdGg9IjAuMyI+PHBhdGggZD0iCk0gMC4wMCAxMDIuMDAgCkMgNC40NSA1MS45MyA0Ny41NSA0Ljk0IDk5LjAwIDEuMDAKQyA5OS4wMSAxLjAwIDk5LjAwIDAuMDAgOTkuMDAgMC4wMApMIDAuMDAgMC4wMApMIDAuMDAgMTAyLjAwIFoiLz4KPC9nPgo8ZyBmaWxsPSJOb25lIiBmaWxsLW9wYWNpdHk9IjAuMCIgc3Ryb2tlPSIjOUZEM0VGIiBzdHJva2Utb3BhY2l0eT0iMS4wMCIgc3Ryb2tlLXdpZHRoPSIwLjMiPjxwYXRoIGQ9IgpNIDk5LjAwIDEuMDAgCkMgMTAxLjIyIDAuODMgMTA0LjYwIDEuODggMTA2LjAwIDAuMDAKTCA5OS4wMCAwLjAwCkMgOTkuMDAgMC4wMCA5OS4wMSAxLjAwIDk5LjAwIDEuMDAgWiIvPgo8L2c+CjxnIGZpbGw9Ik5vbmUiIGZpbGwtb3BhY2l0eT0iMC4wIiBzdHJva2U9IiMxN0ExREYiIHN0cm9rZS1vcGFjaXR5PSIxLjAwIiBzdHJva2Utd2lkdGg9IjAuMyI+PHBhdGggZD0iCk0gOTkuMDAgMS4wMCAKQyA0Ny41NSA0Ljk0IDQuNDUgNTEuOTMgMC4wMCAxMDIuMDAKTCAwLjAwIDEyMy4wMApDIDQuNDEgMTczLjA3IDQ3LjU3IDIyMC4wNiA5OS4wMCAyMjQuMDAKQyAxMDEuMjIgMjI0LjE3IDEwNC42MCAyMjMuMTIgMTA2LjAwIDIyNS4wMApMIDEyMS4wMCAyMjUuMDAKQyAxNzQuNzUgMjIyLjAxIDIyMi41NSAxNzMuNzYgMjI1LjAwIDEyMC4wMApMIDIyNS4wMCAxMDEuMDAKQyAyMTkuOTIgNDguNjMgMTcyLjk2IDIuMjkgMTIwLjAwIDAuMDAKTCAxMDYuMDAgMC4wMApDIDEwNC42MCAxLjg4IDEwMS4yMiAwLjgzIDk5LjAwIDEuMDAKTSAxMjMuMDAgMTAuMDAgCkMgMTk4Ljk3IDE3LjM1IDI0MS4xOCAxMTEuMTMgMTk2LjA4IDE3Mi4wOCBDIDE1MC45OSAyMzMuMDMgNTcuMjggMjI4LjU3IDIxLjIzIDE1OS43NyBDIC0xNC44MiA5MC45NyA0Mi41MiAyLjIxIDEyMy4wMCAxMC4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iTm9uZSIgZmlsbC1vcGFjaXR5PSIwLjAiIHN0cm9rZT0iI0ZERkVGRSIgc3Ryb2tlLW9wYWNpdHk9IjEuMDAiIHN0cm9rZS13aWR0aD0iMC4zIj48cGF0aCBkPSIKTSAyMjUuMDAgMTAxLjAwIApMIDIyNS4wMCAwLjAwCkwgMTIwLjAwIDAuMDAKQyAxNzIuOTYgMi4yOSAyMTkuOTIgNDguNjMgMjI1LjAwIDEwMS4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iTm9uZSIgZmlsbC1vcGFjaXR5PSIwLjAiIHN0cm9rZT0iI0ZERkVGRSIgc3Ryb2tlLW9wYWNpdHk9IjEuMDAiIHN0cm9rZS13aWR0aD0iMC4zIj48cGF0aCBkPSIKTSAxMjMuMDAgMTAuMDAgCkMgNDIuNTIgMi4yMSAtMTQuODIgOTAuOTcgMjEuMjMgMTU5Ljc3IEMgNTcuMjggMjI4LjU3IDE1MC45OSAyMzMuMDMgMTk2LjA4IDE3Mi4wOCBDIDI0MS4xOCAxMTEuMTMgMTk4Ljk3IDE3LjM1IDEyMy4wMCAxMC4wMApNIDU2LjAwIDExMS4wMCAKQyA1NS45NCAxMTMuOTcgNTUuODQgMTE3LjAzIDU2LjAwIDEyMC4wMApDIDU2LjkzIDEzNy4xOCA2OS4xNSAxNTMuMTUgODUuMDAgMTYwLjAwCkMgODEuNTAgMTY5LjA5IDgwLjQxIDE3OC44OCA3Ny4wMCAxODguMDAKQyAxNy4wOCAxNjQuMjAgMTIuMDMgNzEuNTQgNjkuMDAgNDEuMDAKQyA4My42NiA2My42NSA5Ny4yOSA4Ny4zMSAxMTMuMDAgMTA5LjAwCkMgMTI3LjE1IDg2LjE3IDE0Mi4xNSA2My45NyAxNTYuMDAgNDEuMDAKQyAyMTMuMDggNzEuNTIgMjA4LjEwIDE2NC4yNyAxNDguMDAgMTg4LjAwCkMgMTQ1LjYyIDE3OC4zNSAxNDIuMDAgMTY5LjAzIDE0MS4wMCAxNTkuMDAKQyAxNjkuMTIgMTQ4LjEwIDE3OC4xNiAxMDkuNTggMTYxLjAwIDg2LjAwCkMgMTQ4LjkxIDEwMy44NCAxMzYuODUgMTIyLjQxIDEyNi4wMCAxNDEuMDAKQyAxMTcuMDAgMTQxLjAwIDEwOC4wMCAxNDEuMDAgOTkuMDAgMTQxLjAwCkMgODguMzMgMTIyLjMzIDc2LjA0IDEwMy44MCA2NC4wMCA4Ni4wMApDIDU5LjUxIDkzLjYwIDU1LjYwIDEwMS43NiA1Ni4wMCAxMTEuMDAgWiIvPgo8L2c+CjxnIGZpbGw9Ik5vbmUiIGZpbGwtb3BhY2l0eT0iMC4wIiBzdHJva2U9IiMwQUEwREYiIHN0cm9rZS1vcGFjaXR5PSIxLjAwIiBzdHJva2Utd2lkdGg9IjAuMyI+PHBhdGggZD0iCk0gNTYuMDAgMTIwLjAwIApDIDU1LjUwIDExNi45MSA1NS42NCAxMTMuOTggNTYuMDAgMTExLjAwCkMgNTUuNjAgMTAxLjc2IDU5LjUxIDkzLjYwIDY0LjAwIDg2LjAwCkMgNzYuMDQgMTAzLjgwIDg4LjMzIDEyMi4zMyA5OS4wMCAxNDEuMDAKQyAxMDguMDAgMTQxLjAwIDExNy4wMCAxNDEuMDAgMTI2LjAwIDE0MS4wMApDIDEzNi44NSAxMjIuNDEgMTQ4LjkxIDEwMy44NCAxNjEuMDAgODYuMDAKQyAxNzguMTYgMTA5LjU4IDE2OS4xMiAxNDguMTAgMTQxLjAwIDE1OS4wMApDIDE0Mi4wMCAxNjkuMDMgMTQ1LjYyIDE3OC4zNSAxNDguMDAgMTg4LjAwCkMgMjA4LjEwIDE2NC4yNyAyMTMuMDggNzEuNTIgMTU2LjAwIDQxLjAwCkMgMTQyLjE1IDYzLjk3IDEyNy4xNSA4Ni4xNyAxMTMuMDAgMTA5LjAwCkMgOTcuMjkgODcuMzEgODMuNjYgNjMuNjUgNjkuMDAgNDEuMDAKQyAxMi4wMyA3MS41NCAxNy4wOCAxNjQuMjAgNzcuMDAgMTg4LjAwCkMgODAuNDEgMTc4Ljg4IDgxLjUwIDE2OS4wOSA4NS4wMCAxNjAuMDAKQyA2OS4xNSAxNTMuMTUgNTYuOTMgMTM3LjE4IDU2LjAwIDEyMC4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iTm9uZSIgZmlsbC1vcGFjaXR5PSIwLjAiIHN0cm9rZT0iIzlBRDFFRiIgc3Ryb2tlLW9wYWNpdHk9IjEuMDAiIHN0cm9rZS13aWR0aD0iMC4zIj48cGF0aCBkPSIKTSA1Ni4wMCAxMjAuMDAgCkMgNTUuODQgMTE3LjAzIDU1Ljk0IDExMy45NyA1Ni4wMCAxMTEuMDAKQyA1NS42NCAxMTMuOTggNTUuNTAgMTE2LjkxIDU2LjAwIDEyMC4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iTm9uZSIgZmlsbC1vcGFjaXR5PSIwLjAiIHN0cm9rZT0iI0ZERkVGRSIgc3Ryb2tlLW9wYWNpdHk9IjEuMDAiIHN0cm9rZS13aWR0aD0iMC4zIj48cGF0aCBkPSIKTSAxMjEuMDAgMjI1LjAwIApMIDIyNS4wMCAyMjUuMDAKTCAyMjUuMDAgMTIwLjAwCkMgMjIyLjU1IDE3My43NiAxNzQuNzUgMjIyLjAxIDEyMS4wMCAyMjUuMDAgWiIvPgo8L2c+CjxnIGZpbGw9Ik5vbmUiIGZpbGwtb3BhY2l0eT0iMC4wIiBzdHJva2U9IiNGRUZFRkUiIHN0cm9rZS1vcGFjaXR5PSIxLjAwIiBzdHJva2Utd2lkdGg9IjAuMyI+PHBhdGggZD0iCk0gMC4wMCAyMjUuMDAgCkwgOTkuMDAgMjI1LjAwCkMgOTkuMDAgMjI0LjUwIDk5LjAwIDIyNC4wMCA5OS4wMCAyMjQuMDAKQyA0Ny41NyAyMjAuMDYgNC40MSAxNzMuMDcgMC4wMCAxMjMuMDAKTCAwLjAwIDIyNS4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iTm9uZSIgZmlsbC1vcGFjaXR5PSIwLjAiIHN0cm9rZT0iIzlGRDNFRiIgc3Ryb2tlLW9wYWNpdHk9IjEuMDAiIHN0cm9rZS13aWR0aD0iMC4zIj48cGF0aCBkPSIKTSA5OS4wMCAyMjUuMDAgCkwgMTA2LjAwIDIyNS4wMApDIDEwNC42MCAyMjMuMTIgMTAxLjIyIDIyNC4xNyA5OS4wMCAyMjQuMDAKQyA5OS4wMCAyMjQuMDAgOTkuMDAgMjI0LjUwIDk5LjAwIDIyNS4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iI0ZERkVGRSIgZmlsbC1vcGFjaXR5PSIxLjAwIiBzdHJva2U9Ik5vbmUiPgo8cGF0aCBkPSIKTSAwLjAwIDEwMi4wMCAKQyA0LjQ1IDUxLjkzIDQ3LjU1IDQuOTQgOTkuMDAgMS4wMApDIDk5LjAxIDEuMDAgOTkuMDAgMC4wMCA5OS4wMCAwLjAwCkwgMC4wMCAwLjAwCkwgMC4wMCAxMDIuMDAgWiIvPgo8L2c+CjxnIGZpbGw9IiM5RkQzRUYiIGZpbGwtb3BhY2l0eT0iMS4wMCIgc3Ryb2tlPSJOb25lIj4KPHBhdGggZD0iCk0gOTkuMDAgMS4wMCAKQyAxMDEuMjIgMC44MyAxMDQuNjAgMS44OCAxMDYuMDAgMC4wMApMIDk5LjAwIDAuMDAKQyA5OS4wMCAwLjAwIDk5LjAxIDEuMDAgOTkuMDAgMS4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iIzE3QTFERiIgZmlsbC1vcGFjaXR5PSIxLjAwIiBzdHJva2U9Ik5vbmUiPgo8cGF0aCBkPSIKTSA5OS4wMCAxLjAwIApDIDQ3LjU1IDQuOTQgNC40NSA1MS45MyAwLjAwIDEwMi4wMApMIDAuMDAgMTIzLjAwCkMgNC40MSAxNzMuMDcgNDcuNTcgMjIwLjA2IDk5LjAwIDIyNC4wMApDIDEwMS4yMiAyMjQuMTcgMTA0LjYwIDIyMy4xMiAxMDYuMDAgMjI1LjAwCkwgMTIxLjAwIDIyNS4wMApDIDE3NC43NSAyMjIuMDEgMjIyLjU1IDE3My43NiAyMjUuMDAgMTIwLjAwCkwgMjI1LjAwIDEwMS4wMApDIDIxOS45MiA0OC42MyAxNzIuOTYgMi4yOSAxMjAuMDAgMC4wMApMIDEwNi4wMCAwLjAwCkMgMTA0LjYwIDEuODggMTAxLjIyIDAuODMgOTkuMDAgMS4wMApNIDEyMy4wMCAxMC4wMCAKQyAxOTguOTcgMTcuMzUgMjQxLjE4IDExMS4xMyAxOTYuMDggMTcyLjA4IEMgMTUwLjk5IDIzMy4wMyA1Ny4yOCAyMjguNTcgMjEuMjMgMTU5Ljc3IEMgLTE0LjgyIDkwLjk3IDQyLjUyIDIuMjEgMTIzLjAwIDEwLjAwIFoiLz4KPC9nPgo8ZyBmaWxsPSIjRkRGRUZFIiBmaWxsLW9wYWNpdHk9IjEuMDAiIHN0cm9rZT0iTm9uZSI+CjxwYXRoIGQ9IgpNIDIyNS4wMCAxMDEuMDAgCkwgMjI1LjAwIDAuMDAKTCAxMjAuMDAgMC4wMApDIDE3Mi45NiAyLjI5IDIxOS45MiA0OC42MyAyMjUuMDAgMTAxLjAwIFoiLz4KPC9nPgo8ZyBmaWxsPSIjRkRGRUZFIiBmaWxsLW9wYWNpdHk9IjEuMDAiIHN0cm9rZT0iTm9uZSI+CjxwYXRoIGQ9IgpNIDEyMy4wMCAxMC4wMCAKQyA0Mi41MiAyLjIxIC0xNC44MiA5MC45NyAyMS4yMyAxNTkuNzcgQyA1Ny4yOCAyMjguNTcgMTUwLjk5IDIzMy4wMyAxOTYuMDggMTcyLjA4IEMgMjQxLjE4IDExMS4xMyAxOTguOTcgMTcuMzUgMTIzLjAwIDEwLjAwCk0gNTYuMDAgMTExLjAwIApDIDU1Ljk0IDExMy45NyA1NS44NCAxMTcuMDMgNTYuMDAgMTIwLjAwCkMgNTYuOTMgMTM3LjE4IDY5LjE1IDE1My4xNSA4NS4wMCAxNjAuMDAKQyA4MS41MCAxNjkuMDkgODAuNDEgMTc4Ljg4IDc3LjAwIDE4OC4wMApDIDE3LjA4IDE2NC4yMCAxMi4wMyA3MS41NCA2OS4wMCA0MS4wMApDIDgzLjY2IDYzLjY1IDk3LjI5IDg3LjMxIDExMy4wMCAxMDkuMDAKQyAxMjcuMTUgODYuMTcgMTQyLjE1IDYzLjk3IDE1Ni4wMCA0MS4wMApDIDIxMy4wOCA3MS41MiAyMDguMTAgMTY0LjI3IDE0OC4wMCAxODguMDAKQyAxNDUuNjIgMTc4LjM1IDE0Mi4wMCAxNjkuMDMgMTQxLjAwIDE1OS4wMApDIDE2OS4xMiAxNDguMTAgMTc4LjE2IDEwOS41OCAxNjEuMDAgODYuMDAKQyAxNDguOTEgMTAzLjg0IDEzNi44NSAxMjIuNDEgMTI2LjAwIDE0MS4wMApDIDExNy4wMCAxNDEuMDAgMTA4LjAwIDE0MS4wMCA5OS4wMCAxNDEuMDAKQyA4OC4zMyAxMjIuMzMgNzYuMDQgMTAzLjgwIDY0LjAwIDg2LjAwCkMgNTkuNTEgOTMuNjAgNTUuNjAgMTAxLjc2IDU2LjAwIDExMS4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iIzBBQTBERiIgZmlsbC1vcGFjaXR5PSIxLjAwIiBzdHJva2U9Ik5vbmUiPgo8cGF0aCBkPSIKTSA1Ni4wMCAxMjAuMDAgCkMgNTUuNTAgMTE2LjkxIDU1LjY0IDExMy45OCA1Ni4wMCAxMTEuMDAKQyA1NS42MCAxMDEuNzYgNTkuNTEgOTMuNjAgNjQuMDAgODYuMDAKQyA3Ni4wNCAxMDMuODAgODguMzMgMTIyLjMzIDk5LjAwIDE0MS4wMApDIDEwOC4wMCAxNDEuMDAgMTE3LjAwIDE0MS4wMCAxMjYuMDAgMTQxLjAwCkMgMTM2Ljg1IDEyMi40MSAxNDguOTEgMTAzLjg0IDE2MS4wMCA4Ni4wMApDIDE3OC4xNiAxMDkuNTggMTY5LjEyIDE0OC4xMCAxNDEuMDAgMTU5LjAwCkMgMTQyLjAwIDE2OS4wMyAxNDUuNjIgMTc4LjM1IDE0OC4wMCAxODguMDAKQyAyMDguMTAgMTY0LjI3IDIxMy4wOCA3MS41MiAxNTYuMDAgNDEuMDAKQyAxNDIuMTUgNjMuOTcgMTI3LjE1IDg2LjE3IDExMy4wMCAxMDkuMDAKQyA5Ny4yOSA4Ny4zMSA4My42NiA2My42NSA2OS4wMCA0MS4wMApDIDEyLjAzIDcxLjU0IDE3LjA4IDE2NC4yMCA3Ny4wMCAxODguMDAKQyA4MC40MSAxNzguODggODEuNTAgMTY5LjA5IDg1LjAwIDE2MC4wMApDIDY5LjE1IDE1My4xNSA1Ni45MyAxMzcuMTggNTYuMDAgMTIwLjAwIFoiLz4KPC9nPgo8ZyBmaWxsPSIjOUFEMUVGIiBmaWxsLW9wYWNpdHk9IjEuMDAiIHN0cm9rZT0iTm9uZSI+CjxwYXRoIGQ9IgpNIDU2LjAwIDEyMC4wMCAKQyA1NS44NCAxMTcuMDMgNTUuOTQgMTEzLjk3IDU2LjAwIDExMS4wMApDIDU1LjY0IDExMy45OCA1NS41MCAxMTYuOTEgNTYuMDAgMTIwLjAwIFoiLz4KPC9nPgo8ZyBmaWxsPSIjRkRGRUZFIiBmaWxsLW9wYWNpdHk9IjEuMDAiIHN0cm9rZT0iTm9uZSI+CjxwYXRoIGQ9IgpNIDEyMS4wMCAyMjUuMDAgCkwgMjI1LjAwIDIyNS4wMApMIDIyNS4wMCAxMjAuMDAKQyAyMjIuNTUgMTczLjc2IDE3NC43NSAyMjIuMDEgMTIxLjAwIDIyNS4wMCBaIi8+CjwvZz4KPGcgZmlsbD0iI0ZFRkVGRSIgZmlsbC1vcGFjaXR5PSIxLjAwIiBzdHJva2U9Ik5vbmUiPgo8cGF0aCBkPSIKTSAwLjAwIDIyNS4wMCAKTCA5OS4wMCAyMjUuMDAKQyA5OS4wMCAyMjQuNTAgOTkuMDAgMjI0LjAwIDk5LjAwIDIyNC4wMApDIDQ3LjU3IDIyMC4wNiA0LjQxIDE3My4wNyAwLjAwIDEyMy4wMApMIDAuMDAgMjI1LjAwIFoiLz4KPC9nPgo8ZyBmaWxsPSIjOUZEM0VGIiBmaWxsLW9wYWNpdHk9IjEuMDAiIHN0cm9rZT0iTm9uZSI+CjxwYXRoIGQ9IgpNIDk5LjAwIDIyNS4wMCAKTCAxMDYuMDAgMjI1LjAwCkMgMTA0LjYwIDIyMy4xMiAxMDEuMjIgMjI0LjE3IDk5LjAwIDIyNC4wMApDIDk5LjAwIDIyNC4wMCA5OS4wMCAyMjQuNTAgOTkuMDAgMjI1LjAwIFoiLz4KPC9nPgo8L3N2Zz4=", 
+                    "descriptionMarkdown": "The [Mulesoft Anypoint](https://www.mulesoft.com/) data connector provides the capability to ingest audit and sign-in logs into Microsoft Sentinel through the [Mulesoft Anypoint API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/audit-log-query-api/minor/1.0/console/security/%23257/).",
+                    "graphQueries": [
+                        {
+                            "metricName": "Total Logs received",
+                            "legend": "Total Logs received",
+                            "baseQuery": "MuleAnypointV2_CL"
+                        }
+                    ],
+                    "sampleQueries": [
+                        {
+                            "description": "Get Sample of Mulesoft Anypoint Audit Logs",
+                            "query": "MuleAnypointV2_CL | take 10"
+                        }
+                    ],
+                    "dataTypes": [
+                        {
+                            "name": "MuleAnypointV2_CL",
+                            "lastDataReceivedQuery": "MuleAnypointV2_CL \n| where TimeGenerated > ago(24h)\n| summarize Log=count() by TimePeriod = bin(TimeGenerated,10m)"
+                        }
+                    ],
+                    "connectivityCriteria": [
+                        {
+                            "type": "HasDataConnectors",
+                            "value": null
+                        }
+                    ],
+                    "availability": {
+                        "status": 1,
+                        "isPreview": true
+                    },
+                    "permissions": {
+                        "tenant": null,
+                        "licenses": null,
+                        "resourceProvider": [
+                            {
+                                "provider": "Microsoft.OperationalInsights/workspaces",
+                                "permissionsDisplayText": "Read and Write permissions are required.",
+                                "providerDisplayName": "Workspace",
+                                "scope": "Workspace",
+                                "requiredPermissions": {
+                                    "read": true,
+                                    "write": true,
+                                    "delete": true,
+                                    "action": false
+                                }
+                            }
+                        ],
+                        "customs": [
+                            {
+                                "name": "Mulesoft Anypoint REST API access",
+                                "description": "Access to the Mulesoft Anypoint API is required. ClientID and Client Secret are required."
+                            }
+                        ]
+                    },
+                    "instructionSteps": [
+                        {
+                            "description": "**Step 1 - Configuration steps for the MuleSoft Anypoint Audit Log API**\n\nFollow the steps to create a Connected App in the Anypoint Platform to obtain the necessary credentials [see MuleSoft Connected Apps Documentation](https://docs.mulesoft.com/access-management/connected-apps-developers). \n\n1. Log in to your [Anypoint Platform](https://anypoint.mulesoft.com/) and navigate to **Access Management** > **Connected Apps**.\n2. Click **Create App** and select **App acts on its own behalf (client credentials)**.\n3. Click **Add Scopes** and select **Audit Log Viewer**. This is the least-required permission to read audit data.\n4. Save the app and take a note of the **client_id** and **client_secret**.\n5. Navigate to **Access Management** > **Organization** to find and take a note of your **Organization ID**.\n\n>**NOTE:** Authentication requires a POST request to the Anypoint token endpoint. Ensure your connector uses the **Audit Log Viewer** scope to maintain the principle of least privilege.\n\n**Step 2 - Connect your Anypoint account to Microsoft Sentinel**\n\nUse the credentials obtained in the previous step to connect your Anypoint account to Microsoft Sentinel through the UI experience. Enter the Anypoint domain (e.g. eu1.anypoint.mulesoft.com), client id, and client secret to create the connection.\n\n>**NOTE:** The connector will use these credentials to pull audit logs from the Anypoint API at regular intervals. Ensure that the credentials have the necessary permissions and are kept secure."
+                        },
+                        {
+                            "description": "Connect using the Client ID and Client Secret from the Connected App you created in Anypoint Platform.",
+                            "title": "Connect Events from Mulesoft Anypoint to Microsoft Sentinel",
+                            "instructions": [
+                                {
+                                    "type": "ContextPane",
+                                    "parameters": {
+                                        "contextPaneType": "DataConnectorsContextPane",
+                                        "label": "Add Organization",
+                                        "isPrimary": true,
+                                        "title": "Mulesoft Anypoint Organization connection",
+                                        "instructionSteps": [
+                                            {
+                                                "title": "Organization Details",
+                                                "instructions": [
+                                                    {
+                                                        "type": "Textbox",
+                                                        "parameters": {
+                                                            "label": "Mulesoft URL",
+                                                            "placeholder": "https://your-tenant.authentication.region.hana.ondemand.com",
+                                                            "type": "text",
+                                                            "name": "mulesoftUrl"
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "Textbox",
+                                                        "parameters": {
+                                                            "label": "OrganizationName (e.g. Contoso). This will be projected to the InstanceName column.",
+                                                            "placeholder": "no space or special character allowed!",
+                                                            "type": "text",
+                                                            "name": "organizationName"
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "Textbox",
+                                                        "parameters": {
+                                                            "label": "Organization ID (GUID)",
+                                                            "placeholder": "OrganizationId property from the Anypoint Platform ",
+                                                            "type": "text",
+                                                            "name": "organizationId"
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "Textbox",
+                                                        "parameters": {
+                                                            "label": "Client ID",
+                                                            "placeholder": "Client ID",
+                                                            "type": "text",
+                                                            "name": "clientId"
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "Textbox",
+                                                        "parameters": {
+                                                            "label": "Client Secret",
+                                                            "placeholder": "Client Secret",
+                                                            "type": "password",
+                                                            "name": "clientSecret"
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Organizations",
+                            "description": "Each row represents a connected Organization",
+                            "instructions": [
+                                {
+                                    "type": "DataConnectorsGrid",
+                                    "parameters": {
+                                        "mapping": [
+                                            {
+                                                "columnName": "Organization Name",
+                                                "columnValue": "properties.addOnAttributes.organizationName"
+                                            },
+                                            {
+                                                "columnName": "Organization ID",
+                                                "columnValue": "properties.addOnAttributes.organizationId"
+                                            }
+                                        ],
+                                        "menuItems": [
+                                            "DeleteConnector"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "connectionsConfig": {
+                    "templateSpecName": "[concat('/subscriptions/',parameters('subscription'),'/resourceGroups/',parameters('resourceGroupName'),'/providers/Microsoft.Resources/templateSpecs/',variables('dataConnectorTemplateSpecName'))]",
+                    "templateSpecVersion": "[variables('dataConnectorVersion')]"
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('workspace'), '/' , variables('logAnalyticsTableId'))]",
+            "type": "Microsoft.OperationalInsights/workspaces/tables",
+            "apiVersion": "2021-12-01-preview",
+            "location": "[parameters('workspace-location')]",
+            "tags": {},
+            "properties": {
+                "plan": "Analytics",
+                "schema": {
+                    "name": "[variables('logAnalyticsTableId')]",
+                    "columns": [
+                                        {
+                                            "name": "TimeGenerated",
+                                            "type": "datetime",
+                                            "description": "Timestamp when the event was ingested into Microsoft Sentinel.",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "action",
+                                            "type": "string",
+                                            "description": "The type of activity performed (e.g., Login, Edit).",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "timestamp",
+                                            "type": "long",
+                                            "description": "Epoch timestamp of when the event occurred.",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "userId",
+                                            "type": "string",
+                                            "description": "Unique identifier of the user performing the action.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "userName",
+                                            "type": "string",
+                                            "description": "Display name or username of the actor.",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "clientId",
+                                            "type": "string",
+                                            "description": "Identifier for the connected application or client.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "clientName",
+                                            "type": "string",
+                                            "description": "Name of the client application used.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "clientIP",
+                                            "type": "string",
+                                            "description": "IP address from which the request originated.",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "ClientIPGeoInfo",
+                                            "type": "dynamic",
+                                            "description": "Geographical information derived from the client IP address.",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "payload",
+                                            "type": "dynamic",
+                                            "description": "Metadata containing subactions and properties.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "failed",
+                                            "type": "boolean",
+                                            "description": "Indicates if the action was unsuccessful.",
+                                            "isDefaultDisplay": true,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "failedCause",
+                                            "type": "string",
+                                            "description": "Reason for failure, if applicable.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "anypointTransactionId",
+                                            "type": "string",
+                                            "description": "Unique trace ID for the transaction.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "platform",
+                                            "type": "string",
+                                            "description": "The service or platform where the event originated.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        },
+                                        {
+                                            "name": "objects",
+                                            "type": "dynamic",
+                                            "description": "Array of objects affected by the action.",
+                                            "isDefaultDisplay": false,
+                                            "isHidden": false
+                                        }
+                                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Insights/dataCollectionEndpoints",
+            "apiVersion": "2021-09-01-preview",
+            "name": "[variables('dataCollectionEndpointName')]",
+            "location": "[parameters('workspace-location')]",
+            "properties": {}
+        },
+        {
+            "name": "[variables('dataCollectionRuleId')]",
+            "apiVersion": "2021-09-01-preview",
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "location": "[parameters('workspace-location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dataCollectionEndpointName'))]",
+                "[concat('subscriptions/', parameters('subscription'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'), '/tables/', variables('logAnalyticsTableId'))]"
+            ],
+            "properties": {
+                "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dataCollectionEndpointName'))]",
+                "streamDeclarations": {
+                    "[concat('Custom-', variables('MuleAnypointStream'))]": {
+                        "columns": [
+                                            {
+                                                "name": "TimeGenerated",
+                                                "type": "datetime"
+                                            },
+                                            {
+                                                "name": "action",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "timestamp",
+                                                "type": "long"
+                                            },
+                                            {
+                                                "name": "userId",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "userName",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "clientId",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "clientName",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "clientIP",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "ClientIPGeoInfo",
+                                                "type": "dynamic"
+                                            },
+                                            {
+                                                "name": "payload",
+                                                "type": "dynamic"
+                                            },
+                                            {
+                                                "name": "failed",
+                                                "type": "boolean"
+                                            },
+                                            {
+                                                "name": "failedCause",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "anypointTransactionId",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "platform",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "objects",
+                                                "type": "dynamic"
+                                            }
+                                        ]
+                }
+                },
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "workspaceResourceId": "[variables('workspaceResourceId')]",
+                            "name": "clv2ws1"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "[concat('Custom-', variables('MuleAnypointStream'))]"
+                        ],
+                        "destinations": [
+                            "clv2ws1"
+                        ],
+                        "transformKql": "source",
+                        "outputStream": "[concat('Custom-', variables('logAnalyticsTableId'))]"
+                    }
+                ]
+            }
+        }, 
+        {
+            "type": "Microsoft.Resources/templateSpecs",
+            "apiVersion": "2021-05-01",
+            "name": "[variables('dataConnectorTemplateSpecName')]",
+            "location": "[parameters('workspace-location')]",
+            "tags": {
+                "hidden-sentinelWorkspaceId": "[variables('workspaceResourceId')]",
+                "hidden-sentinelContentType": "DataConnector"
+            },
+            "properties": {
+                "description": "Mulesoft Anypoint Connector Template",
+                "displayName": "Mulesoft Anypoint Event Logs template"
+            }
+        },
+        {
+            "type": "Microsoft.Resources/templateSpecs/versions",
+            "apiVersion": "2021-05-01",
+            "name": "[concat(variables('dataConnectorTemplateSpecName'),'/',variables('dataConnectorVersion'))]",
+            "location": "[parameters('workspace-location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/templateSpecs', variables('dataConnectorTemplateSpecName'))]",
+                "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dataCollectionEndpointName'))]",
+                "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dataCollectionRuleId'))]"
+            ],
+            "tags": {
+                "hidden-sentinelWorkspaceId": "[variables('workspaceResourceId')]",
+                "hidden-sentinelContentType": "DataConnector"
+            },
+            "properties": {
+                "description": "Mulesoft Anypoint data connector Template Spec version",
+                "mainTemplate": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "[variables('dataConnectorVersion')]",
+                    "parameters": {
+                        "organizationId": {
+                            "defaultValue": "-NA-",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "Organization ID for the Mulesoft Anypoint user"
+                            }
+                        },
+                        "organizationName": {
+                            "defaultValue": "-NA-",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "Organization Name for the Mulesoft Anypoint user"
+                            }
+                        },
+                        "mulesoftUrl": {
+                            "defaultValue": "-NA-",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "Mulesoft Anypoint URL for the organization"
+                            }
+                        },
+                        "clientId": {
+                            "defaultValue": "-NA-",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "Client ID for the Mulesoft Anypoint user"
+                            }
+                        },
+                        "clientSecret": {
+                            "defaultValue": "-NA-",
+                            "type": "securestring",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "Client Secret for the Mulesoft Anypoint user"
+                            }
+                        },
+                        "connectorDefinitionName": {
+                            "defaultValue": "Mulesoft Anypoint Custom Data Connector",
+                            "type": "string",
+                            "minLength": 1,
+                            "metadata": {
+                                "description": "connectorDefinitionName"
+                            }
+                        },
+                        "workspace": {
+                            "defaultValue": "[parameters('workspace')]",
+                            "type": "string"
+                        },
+                        "dataCollectionEndpointName": {
+                            "defaultValue": "[variables('dataCollectionEndpointName')]",
+                            "type": "string"
+                        },
+                        "dataCollectionRuleId": {
+                            "defaultValue": "[variables('dataCollectionRuleId')]",
+                            "type": "string"
+                        }
+                    },
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectors",
+                            "apiVersion": "2021-10-01-preview",
+                            "name": "[[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', 'MuleOrg', parameters('organizationName'))]",
+                            "location": "[parameters('workspace-location')]",
+                            "kind": "RestApiPoller",
+                            "properties": {
+                                "connectorDefinitionName": "[[parameters('connectorDefinitionName')]",
+                                "dataType": "[variables('logAnalyticsTableId')]",
+                                "addOnAttributes": {
+                                    "organizationName": "[[parameters('organizationName')]",
+                                    "organizationId": "[[parameters('organizationId')]"
+                                },
+                                "auth": {
+                                    "type": "OAuth2",
+                                    "ClientId": "[[parameters('clientId')]",
+                                    "ClientSecret": "[[parameters('clientSecret')]",
+                                    "tokenEndpoint": "[[concat(parameters('mulesoftUrl'),'/accounts/api/v2/oauth2/token')]",
+                                    "grantType": "client_credentials"
+                                },
+                                "request": {
+                                    "apiEndpoint": "[[concat(parameters('mulesoftUrl'),'/audit/v2/organizations/',parameters('OrganizationId'),'/query')]",
+                                    "queryTimeFormat": "yyyy-MM-ddTHH:mm:ss.fffZ",
+                                    "rateLimitQPS": 10,
+                                    "queryWindowInMin": 1,
+                                    "httpMethod": "POST",
+                                    "retryCount": 3,
+                                    "timeoutInSeconds": 60,
+                                    "headers": {},
+                                    "isPostPayloadJson": true,
+                                    "queryParameters": {
+                                        "startDate": "{_QueryWindowStartTime}",
+                                        "endDate": "{_QueryWindowEndTime}",
+                                        "organizationId": "[[parameters('OrganizationId')]",
+                                        "limit": 200
+                                    }
+                                },
+                                "response": {
+                                    "eventsJsonPaths": [
+                                        "$.data"
+                                    ],
+                                    "format": "json"
+                                },
+                                "dcrConfig": {
+                                    "streamName": "[concat('Custom-',variables('MuleAnypointStream'))]",
+                                    "dataCollectionEndpoint": "[[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dataCollectionEndpointName')), '2021-09-01-preview').logsIngestion.endpoint]",
+                                    "dataCollectionRuleImmutableId": "[[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dataCollectionRuleId')), '2021-09-01-preview').immutableId]"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
