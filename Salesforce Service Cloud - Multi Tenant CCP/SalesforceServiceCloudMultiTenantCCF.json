@@ -171,7 +171,7 @@
                                                     {
                                                         "type": "Textbox",
                                                         "parameters": {
-                                                            "label": "Salesforce Tenant Name (e.g. Contoso). This will be projected to the InstanceName column.",
+                                                            "label": "Salesforce Tenant Name (e.g. Contoso). This will be projected to the Tenant Name column.",
                                                             "placeholder": "no space or special character allowed!",
                                                             "type": "text",
                                                             "name": "salesforceTenantName"
